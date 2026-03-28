@@ -7,11 +7,10 @@ Description
 -----------
 This project provides a Python tool to generate single HDR jpg with Gain map,
 from SDR/HDR pair.
-Lightroom does not allow precise control over the processing of the SDR version of HDR images with a Gain Map.
-Combining an SDR image with an HDR image to create an Ultra HDR image with a Gain Map
-provides the best compromise for all types of displays, offering fine-grained control over each displayed version.
-Additionally, the HDR images created work perfectly for Instagram posts,
-which is not always the case with exports from Lightroom.
+
+Lightroom does not provide precise control over the processing of both SDR and HDR images when using a gain map.
+By combining an SDR image with an HDR image to create an Ultra HDR image with a gain map, you achieve an optimal balance across all types of displays, with fine-grained control over how each version is rendered.
+In addition, the resulting HDR images are fully compatible with Instagram posts—something that is not always guaranteed with Lightroom exports.
 
 Installation
 ------------
@@ -34,12 +33,11 @@ Installation
 ```
 
 4. Install ultrahdr_app:
-    macOS (using Homebrew):
+ - macOS (using Homebrew):
 ```
         brew install libultrahdr
 ```
-    Windows:
-        Install or build app from https://github.com/google/libultrahdr, and add 'ultrahdr_app' to the PATH
+- Windows: Install or build app from https://github.com/google/libultrahdr, and add 'ultrahdr_app' to the PATH
 
 Usage
 -----
