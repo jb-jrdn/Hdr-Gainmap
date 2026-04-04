@@ -170,3 +170,67 @@ def get_adapted_rgb_primaries(
     )
     max_value = 1.0 if not is_hdr else None
     return np.clip(dest_image, 0, max_value)
+
+
+def get_hdr_from_sdr_stacking(
+    sdr_np_linear: np.ndarray,
+    sdr_rgb_profile: colour.RGB_Colourspace,
+    sdr_ev_np_linear: np.ndarray,
+    sdr_ev_rgb_profile: colour.RGB_Colourspace,
+    ev: float,
+    luminance_mask_parameters: tuple = (0.25, 0.60),
+    color_mask_parameters: tuple = (0.10, 0.25),
+):
+    # convert sdr_ev to sdr color space and apply ev
+    sdr_ev_np_linear = colour.RGB_to_RGB(
+        RGB=sdr_ev_np_linear,
+        input_colourspace=sdr_ev_rgb_profile,
+        output_colourspace=sdr_rgb_profile
+    )
+    sdr_ev_np_linear = np.clip(sdr_ev_np_linear, 0, 1)
+
+    # split luma and chroma
+    sdr_xyz = colour.RGB_to_XYZ(
+        RGB=sdr_np_linear,
+        colourspace=sdr_rgb_profile,
+    )
+    sdr_y = sdr_xyz[:,:,1]
+    sdr_xy = colour.XYZ_to_xy(sdr_xyz)
+
+    sdr_ev_xyz = colour.RGB_to_XYZ(
+        RGB=sdr_ev_np_linear,
+        colourspace=sdr_ev_rgb_profile,
+    )
+    sdr_ev_y = sdr_ev_xyz[:,:,1]
+    sdr_ev_xy = colour.XYZ_to_xy(sdr_ev_xyz)
+
+    def getMask(
+        image: np.ndarray,
+        mask_parameters: tuple[float, float],
+    ) -> np.ndarray:
+        mask_coef = 1 / (mask_parameters[1] - mask_parameters[0])
+        mask_offset = - mask_coef * mask_parameters[0]
+        return np.clip(image * mask_coef + mask_offset, 0, 1)
+
+    # create masks
+    luminance_mask = getMask(sdr_y, luminance_mask_parameters)
+    color_mask = getMask(sdr_y, color_mask_parameters)
+    color_mask = np.stack((color_mask,color_mask), axis=-1)
+
+    # hdr luminance
+    hdr_y = sdr_y * (1-luminance_mask) + sdr_ev_y * (2**ev) * luminance_mask
+
+    # hdr color
+    hdr_xy = sdr_xy * (1-color_mask) + sdr_ev_xy * color_mask
+
+    # merge luma and chroma
+    hdr_xyy = np.zeros_like(sdr_xyz)
+    hdr_xyy[:,:,0:2] = hdr_xy[:,:]
+    hdr_xyy[:,:,2] = hdr_y[:,:]
+    hdr_xyz = colour.xyY_to_XYZ(hdr_xyy)
+    hdr_np_linear = colour.XYZ_to_RGB(
+        XYZ=hdr_xyz,
+        colourspace=sdr_rgb_profile,
+    )
+
+    return hdr_np_linear

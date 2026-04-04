@@ -1,6 +1,5 @@
 import os
-from tools import uhdr_tools
-from tools import image_tools
+from tools import uhdr_tools, image_tools
 
 class SdrHdrToUhdr:
 

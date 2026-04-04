@@ -1,8 +1,11 @@
 import argparse
-from gen import sdr_hdr_to_uhdr
-from gen import sdr_to_uhdr
+from gen import sdr_ev_to_uhdr, sdr_hdr_to_uhdr, sdr_sdr_ev_to_uhdr
 
-SUPPORTED_MODES = ["sdr_hdr_uhdr", "sdr_uhdr"]
+SUPPORTED_MODES = [
+    "sdr_hdr_uhdr", "sh2u",
+    "sdr_ev_uhdr", "se2u",
+    "sdr_sdr_ev_uhdr", "sse2u",
+]
 
 
 def main(argsd=None):
@@ -18,7 +21,8 @@ Examples:
     Single image:
         main.py --sdr img_sdr.jpg --hdr img_hdr.avif
         main.py --mode sdr_hdr_uhdr --sdr img_sdr.jpg --hdr img_hdr.avif -o myUhdr.jpg
-        main.py --mode sdr_uhdr --sdr img_sdr.jpg --ev 2 -o myUhdr2ev.jpg
+        main.py --mode sdr_ev_uhdr --sdr img_sdr.jpg --ev 2 -o myUhdr2ev.jpg
+        main.py --mode sse2u --sdr img_sdr.jpg --sdrev img_sdr_ev.jpg --ev 2
 
     Batch on folder: process all SDR & HDR pair in the folder (ex: img_sdr.jpg & img_hdr.avif)
         main.py --mode sdr_hdr_uhdr --dir '/Users/my/Desktop/export'
@@ -33,6 +37,7 @@ Examples:
     )
     parser.add_argument("--sdr", help="Path to SDR image (.jpg)")
     parser.add_argument("--hdr", help="Path to HDR image (.avif)")
+    parser.add_argument("--sdrev", help="Path to SDR ev image (.jpg)")
     parser.add_argument("--ev", help="EV value")
     parser.add_argument("-o", "--output", help="Output file")
     parser.add_argument("-d", "--dir", help="Directory containing SDR/HDR image pairs")
@@ -55,16 +60,24 @@ Examples:
 
 def process_single_image(args):
     try:
-        if args.mode == "sdr_hdr_uhdr":
+        if args.mode in ["sdr_hdr_uhdr", "sh2u"]:
             process = sdr_hdr_to_uhdr.SdrHdrToUhdr(
                 sdr_path=args.sdr,
                 hdr_path=args.hdr,
                 uhdr_path=args.output,
                 keep_temp_files=args.keep_temp_files,
             )
-        elif args.mode == "sdr_uhdr":
-            process = sdr_to_uhdr.SdrToUhdr(
+        elif args.mode in ["sdr_ev_uhdr", "se2u"]:
+            process = sdr_ev_to_uhdr.SdrToUhdr(
                 sdr_path=args.sdr,
+                ev=float(args.ev),
+                uhdr_path=args.output,
+                keep_temp_files=args.keep_temp_files,
+            )
+        elif args.mode in ["sdr_sdr_ev_uhdr", "sse2u"]:
+            process = sdr_sdr_ev_to_uhdr.SdrSdrEvToUhdr(
+                sdr_path=args.sdr,
+                sdr_ev_path=args.sdrev,
                 ev=float(args.ev),
                 uhdr_path=args.output,
                 keep_temp_files=args.keep_temp_files,
@@ -78,13 +91,13 @@ def process_single_image(args):
 
 def process_folder(args):
     try:
-        if args.mode == "sdr_hdr_uhdr":
+        if args.mode in ["sdr_hdr_uhdr", "sh2u"]:
             sdr_hdr_to_uhdr.process_folder(
                 input_directory=args.dir,
                 keep_temp_files=args.keep_temp_files,
             )
-        elif args.mode == "sdr_uhdr":
-            print("sdr_uhdr batch mode is not available (yet?)")
+        elif args.mode in ["sdr_ev_uhdr", "se2u", "sdr_sdr_ev_uhdr", "sse2u"]:
+            print("Batch is not available (yet?)for this mode")
         else:
             return
     except Exception as e:

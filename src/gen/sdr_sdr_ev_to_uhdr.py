@@ -1,12 +1,12 @@
 import os
-from tools import uhdr_tools
-from tools import image_tools
+from tools import uhdr_tools, image_tools
 
-class SdrToUhdr:
+class SdrSdrEvToUhdr:
 
     def __init__(
         self,
         sdr_path: str,
+        sdr_ev_path: str,
         ev: float = 2.0,
         uhdr_path: str | None = None,
         keep_temp_files: bool = False,
@@ -14,6 +14,10 @@ class SdrToUhdr:
         self.sdr_path = sdr_path
         self.sdr_np_image = None
         self.sdr_rgb_profile = None
+
+        self.sdr_ev_path = sdr_ev_path
+        self.sdr_ev_np_image = None
+        self.sdr_ev_rgb_profile = None
 
         self.ev = ev
 
@@ -28,17 +32,28 @@ class SdrToUhdr:
         self.keep_temp_files = keep_temp_files
 
     def run(self) -> None:
-        # load image
+        # load images
         self.sdr_np_image, self.sdr_rgb_profile = image_tools.open_sdr_image(self.sdr_path)
+        self.sdr_ev_np_image, self.sdr_ev_rgb_profile = image_tools.open_sdr_image(self.sdr_ev_path)
 
         # linearize
         sdr_np_image_linear = image_tools.get_linear_image(
             image=self.sdr_np_image,
             rgb_profile=self.sdr_rgb_profile,
         )
+        sdr_ev_np_image_linear = image_tools.get_linear_image(
+            image=self.sdr_ev_np_image,
+            rgb_profile=self.sdr_ev_rgb_profile,
+        )
 
-        # apply ev
-        hdr_np_image_linear = sdr_np_image_linear * pow(2, self.ev)
+        # get hdr image
+        hdr_np_image_linear = image_tools.get_hdr_from_sdr_stacking(
+            sdr_np_linear=sdr_np_image_linear,
+            sdr_rgb_profile=self.sdr_rgb_profile,
+            sdr_ev_np_linear=sdr_ev_np_image_linear,
+            sdr_ev_rgb_profile=self.sdr_ev_rgb_profile,
+            ev=self.ev,
+        )
 
         # process gain map
         self.gainmap_np_image, min_map, max_map = uhdr_tools.get_uhdr_gainmap(
@@ -77,6 +92,8 @@ class SdrToUhdr:
     def validate(self) -> None:
         if not os.path.isfile(self.sdr_path):
             raise FileNotFoundError(f"Sdr image not found: {self.sdr_path}")
+        if not os.path.isfile(self.sdr_ev_path):
+            raise FileNotFoundError(f"Sdr ev image not found: {self.sdr_ev_path}")
         if not (-5.01 < self.ev < 5.01):
             raise ValueError(f"EV value must be in [-5,5]")
 
