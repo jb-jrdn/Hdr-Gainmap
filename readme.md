@@ -1,66 +1,134 @@
-UhdrGen
-========
+🧾 UhdrGen
+=======
 
-Convert SDR + HDR images to Jpeg with gainmap.
+Generate Ultra HDR images (JPEG + Gain Map) optimized for SDR and HDR displays.
 
-Description
+📸 Overview
 -----------
-This project provides a Python tool to generate single HDR jpg with Gain map,
-from SDR/HDR pair.
 
-<table>
-  <tr>
-    <th><b>SDR image</b></br>input_sdr.jpg</th>
-    <th><b>HDR image</b></br>input_hdr.avif</th>
-    <th><b>HDR image with gain map</b></br>output_uhdr.jpg</th>
-  </tr>
-  <tr>
-    <td><img src="Samples/input_SDR.jpg" width="250"/></td>
-    <td><img src="Samples/input_HDR.avif" width="250"/></td>
-    <td><img src="Samples/output_uhdr.jpg" width="250"/></td>
-  </tr>
-</table>
-Note: HDR display and compatible browser (ex: Chrome) to see hdr images.
-</br></br>
-Lightroom does not provide precise control over the processing of both SDR and HDR images when using a gain map.
-By combining an SDR image with an HDR image to create an Ultra HDR image with a gain map, you achieve an optimal balance across all types of displays, with fine-grained control over how each version is rendered.
-In addition, the resulting HDR images are fully compatible with Instagram posts—something that is not always guaranteed with Lightroom exports.
+UhdrGen is a Python tool that creates Ultra HDR images by combining SDR and HDR sources into a single JPEG file with a gain map.
 
-Install and launch
+This ensures:
+
+- ✅ Optimal rendering on SDR screens
+- ✅ Enhanced brightness and contrast on HDR displays
+- ✅ Compatibility with platforms like Instagram
+
+🚀 Quick Start
 ------------------
+
 ```
    git clone https://github.com/jb-jrdn/UhdrGen.git
    cd UhdrGen
-   python3 -m venv venv               # create venv
-   source venv/bin/activate           # macOS / Linux
-   venv\Scripts\activate              # Windows PowerShell
-   pip install -r requirements.txt    # install dependencies
-   brew install libultrahdr           # install ultrahdr lib, for mac
-```
-For Windows: Install or build app from https://github.com/google/libultrahdr, and add 'ultrahdr_app' to the PATH
 
-Usage
------
-Single file mode:
-```
-   python main.py --sdr path/to/image_sdr.jpg --hdr path/to/image_hdr.avif --output path/to/output.jpg
+   python3 -m venv venv
+   source venv/bin/activate    # macOS / Linux
+   # venv\Scripts\activate     # Windows PowerShell
+
+   pip install -r requirements.txt
 ```
 
-Batch mode (entire folder):
-- SDR and HDR images must share the same base name with suffixes `_sdr` / `_hdr`:
-    - image1_sdr.jpg / image1_hdr.avif
-    - image2_sdr.jpg / image2_hdr.avif
+<h3>Install UltraHDR library</h3>
+
+- macOS:
+
 ```
-   python main.py --dir path/to/images/
+brew install libultrahdr
 ```
 
-Optimal Lightroom settings for Instagram post
----------------------------------------------
+- Windows:
+
+Install from https://github.com/google/libultrahdr <br>
+Add 'ultrahdr_app' to the PATH
+
+⚙️ Usage
+--------
+
+<h3>Mode 1: sh2u (SDR + HDR → UltraHDR) ✅ Recommended</h3>
+
+Combine SDR image (jpg) and HDR image (avif)
+
+```
+main.py --mode sh2u --sdr input_sdr.jpg --hdr input_hdr.avif -o output_uhdr_1.jpg
+```
+
+<table>
+  <tr>
+    <td><b>SDR image</b></br><small>input_sdr.jpg</small></td>
+    <td><b>HDR image</b></br><small>input_hdr.avif</small></td>
+    <td><b>HDR image with gain map</b></br><small>output_uhdr_1.jpg</small></td>
+  </tr>
+  <tr>
+    <td><img src="samples/input_sdr.jpg" width="250"/></td>
+    <td><img src="samples/input_hdr.avif" width="250"/></td>
+    <td><img src="samples/output_uhdr_1.jpg" width="250"/></td>
+  </tr>
+</table>
+
+<h4>Batch mode:</h4>
+
+```
+python main.py --dir path/to/images/
+```
+
+File naming convention type:
+
+```
+image.jpg
+image.avif
+```
+
+---
+
+<h3>Mode 2: sse2u (SDR + SDR exposure → UltraHDR)</h3>
+
+Combine SDR image and SDR underexposed image (with EV value)
+
+```
+main.py --mode sse2u --sdr input_sdr.jpg --sdrev input_sdr_2ev.avif --ev 2 -o output_uhdr_2.jpg
+```
+
+<table>
+  <tr>
+    <td><b>SDR image</b></br><small>input_sdr.jpg</small></td>
+    <td><b>SDR image - 2EV</b></br><small>input_sdr_2ev.avif</small></td>
+    <td><b>HDR image with gain map</b></br><small>output_uhdr_2.jpg</small></td>
+  </tr>
+  <tr>
+    <td><img src="samples/input_sdr.jpg" width="250"/></td>
+    <td><img src="samples/input_sdr_2ev.jpg" width="250"/></td>
+    <td><img src="samples/output_uhdr_2.jpg" width="250"/></td>
+  </tr>
+</table>
+
+---
+
+<h3>Mode 3: se2u (SDR boosted EV → UltraHDR)</h3>
+
+Generate HDR from one SDR image with exposure compensation
+
+```
+main.py --mode se2u --sdr input_sdr_2ev.jpg --ev 2 -o output_uhdr_3.jpg
+```
+
+<table>
+  <tr>
+    <td><b>SDR image</b></br><small>input_sdr_2ev.jpg</small></td>
+    <td><b>HDR image with gain map</b></br><small>output_uhdr_3.jpg</small></td>
+  </tr>
+  <tr>
+    <td><img src="samples/input_sdr_2ev.jpg" width="250"/></td>
+    <td><img src="samples/output_uhdr_3.jpg" width="250"/></td>
+  </tr>
+</table>
+
+Recommended Lightroom Export Settings
+-------------------------------------
 - SDR image:
    - HDR Off in Develop mode
    - Export setting:
       - Image Format: JPEG
-      - Quality: 95 (recommended)
+      - Quality: 95
       - Color Space: Display P3
       - HDR Output: No
 - HDR image:
@@ -71,8 +139,13 @@ Optimal Lightroom settings for Instagram post
       - Color Space: HDR P3
       - HDR Output: Yes
       - Maximize Compatibility: No
-</br></br>
-Note:
+
+<h3>Note:</h3>
+
    - SDR and HDR images must have the same image size
    - To use batch mode of this tool, export SDR and HDR in the same folder
 
+📄 License
+----------
+
+MIT
