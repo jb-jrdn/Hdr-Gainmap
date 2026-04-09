@@ -1,107 +1,95 @@
-import argparse
+import typer
 from gen import sdr_ev_to_uhdr, sdr_hdr_to_uhdr, sdr_sdr_ev_to_uhdr
 
-SUPPORTED_MODES = [
-    "sdr_hdr_uhdr", "sh2u",
-    "sdr_ev_uhdr", "se2u",
-    "sdr_sdr_ev_uhdr", "sse2u",
-]
+app = typer.Typer(
+    add_completion=False,
+    help="Convert SDR + HDR images to HDR with Gain Map (UltraHDR)",
+    no_args_is_help=True,
+)
 
 
-def main(argsd=None):
+def run_sdr_hdr(sdr, hdr, output=None, keep_temp_files=False):
+    process = sdr_hdr_to_uhdr.SdrHdrToUhdr(
+        sdr_path=sdr, hdr_path=hdr, uhdr_path=output, keep_temp_files=keep_temp_files
+    )
+    process.validate()
+    process.run()
+
+
+def run_sdr_sdr_ev(sdr, sdrev, ev, output=None, keep_temp_files=False):
+    process = sdr_sdr_ev_to_uhdr.SdrSdrEvToUhdr(
+        sdr_path=sdr, sdr_ev_path=sdrev, ev=ev, uhdr_path=output, keep_temp_files=keep_temp_files
+    )
+    process.validate()
+    process.run()
+
+
+def run_sdr_ev(sdr, ev, output=None, keep_temp_files=False):
+    process = sdr_ev_to_uhdr.SdrToUhdr(
+        sdr_path=sdr, ev=ev, uhdr_path=output, keep_temp_files=keep_temp_files
+    )
+    process.validate()
+    process.run()
+
+
+@app.command()
+def main(
+    sdr: str = typer.Option(None, "--sdr", "-s", help="Path to sdr image (.jpg)"),
+    hdr: str = typer.Option(None, "--hdr", "-H", help="Path to hdr image (.avif)"),
+    sdrev: str = typer.Option(None, "--sdrev", "-se", help="Path to sdr image with ev (.jpg)"),
+    ev: float = typer.Option(None, "--ev", "-e", help="EV value (ex: 2)"),
+    output: str = typer.Option(None, "--output", "-o", help="Path to output image (.jpg)"),
+    keep_temp_files: bool = typer.Option(False, "--keep-temp-files", "-k", help="Keep gain map and metadata"),
+    dir: str = typer.Option(None, "--dir", "-d", help="Dir path to process (sdr + hdr)"),
+):
     """
-    Entry point of the script. Parses the command-line arguments and starts the processing.
+    Convert SDR/HDR images to Ultra HDR (Gain Map).
+
+    Sample usage:
+
+    SDR+HDR: --sdr img.jpg --hdr img.avif
+    SDR+SDR_EV+EV: --sdr img.jpg --sdrev img_ev.jpg --ev 2
+    SDR+EV: --sdr img.jpg --ev 2
+
+    Batch: --dir /path/to/dir
     """
 
-    parser = argparse.ArgumentParser(
-        description="Convert SDR + HDR images to Ultra HDR (gainmap JPEG)",
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog="""
-Examples:
-    Single image:
-        main.py --sdr img_sdr.jpg --hdr img_hdr.avif
-        main.py --mode sdr_hdr_uhdr --sdr img_sdr.jpg --hdr img_hdr.avif -o myUhdr.jpg
-        main.py --mode sdr_ev_uhdr --sdr img_sdr.jpg --ev 2 -o myUhdr2ev.jpg
-        main.py --mode sse2u --sdr img_sdr.jpg --sdrev img_sdr_ev.jpg --ev 2
+    # Batch mode
+    if dir:
+        typer.echo(f"Batch mode on directory: {dir}")
+        sdr_hdr_to_uhdr.process_folder(input_directory=dir, keep_temp_files=keep_temp_files)
+        return
 
-    Batch on folder: process all SDR & HDR pair in the folder (ex: img_sdr.jpg & img_hdr.avif)
-        main.py --mode sdr_hdr_uhdr --dir '/Users/my/Desktop/export'
+    # sdr + hdr mode
+    if sdr and hdr:
+        run_sdr_hdr(sdr, hdr, output, keep_temp_files)
+        return
 
-"""
+    # sdr + sdr ev mode
+    if sdr and sdrev and ev is not None:
+        run_sdr_sdr_ev(sdr, sdrev, ev, output, keep_temp_files)
+        return
+
+    # sdr ev mode
+    if sdr and ev is not None:
+        run_sdr_ev(sdr, ev, output, keep_temp_files)
+        return
+
+    # else
+    raise typer.BadParameter(
+        "Cannot detect ht wanted mode !\n"
+        "Samples:\n"
+        "  SDR+HDR: --sdr img.jpg --hdr img.avif\n"
+        "  SDR+EV: --sdr img.jpg --ev 2\n"
+        "  SDR+SDR_EV+EV: --sdr img.jpg --sdrev img_ev.jpg --ev 2\n"
+        "  Batch: --dir /chemin/du/dossier"
     )
-    parser.add_argument(
-        "-m", "--mode",
-        default="sdr_hdr_uhdr",
-        choices=SUPPORTED_MODES,
-        help="Processing mode",
-    )
-    parser.add_argument("--sdr", help="Path to SDR image (.jpg)")
-    parser.add_argument("--hdr", help="Path to HDR image (.avif)")
-    parser.add_argument("--sdrev", help="Path to SDR ev image (.jpg)")
-    parser.add_argument("--ev", help="EV value")
-    parser.add_argument("-o", "--output", help="Output file")
-    parser.add_argument("-d", "--dir", help="Directory containing SDR/HDR image pairs")
-    parser.add_argument(
-        "-k", "--keep-temp-files",
-        action="store_true",
-        help="Keep gainmap and metadata files",
-    )
-    parser.add_argument("--debug", help="Directory containing SDR/HDR image pairs")
 
-    if argsd:
-        args = parser.parse_args(argsd)
-    else:
-        args = parser.parse_args()
-
-    if args.sdr:
-        process_single_image(args)
-    elif args.dir:
-        process_folder(args)
-
-def process_single_image(args):
-    try:
-        if args.mode in ["sdr_hdr_uhdr", "sh2u"]:
-            process = sdr_hdr_to_uhdr.SdrHdrToUhdr(
-                sdr_path=args.sdr,
-                hdr_path=args.hdr,
-                uhdr_path=args.output,
-                keep_temp_files=args.keep_temp_files,
-            )
-        elif args.mode in ["sdr_ev_uhdr", "se2u"]:
-            process = sdr_ev_to_uhdr.SdrToUhdr(
-                sdr_path=args.sdr,
-                ev=float(args.ev),
-                uhdr_path=args.output,
-                keep_temp_files=args.keep_temp_files,
-            )
-        elif args.mode in ["sdr_sdr_ev_uhdr", "sse2u"]:
-            process = sdr_sdr_ev_to_uhdr.SdrSdrEvToUhdr(
-                sdr_path=args.sdr,
-                sdr_ev_path=args.sdrev,
-                ev=float(args.ev),
-                uhdr_path=args.output,
-                keep_temp_files=args.keep_temp_files,
-            )
-        else:
-            return
-        process.validate()
-        process.run()
-    except Exception as e:
-        print(f"Error during processing : {e}")
-
-def process_folder(args):
-    try:
-        if args.mode in ["sdr_hdr_uhdr", "sh2u"]:
-            sdr_hdr_to_uhdr.process_folder(
-                input_directory=args.dir,
-                keep_temp_files=args.keep_temp_files,
-            )
-        elif args.mode in ["sdr_ev_uhdr", "se2u", "sdr_sdr_ev_uhdr", "sse2u"]:
-            print("Batch is not available (yet?)for this mode")
-        else:
-            return
-    except Exception as e:
-        print(f"Error processing image folder : {e}")
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) == 1:
+        sys.argv.append("--help")
+
+    app()
