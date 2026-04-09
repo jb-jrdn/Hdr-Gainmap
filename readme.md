@@ -1,9 +1,9 @@
-🧾 UhdrGen
+UhdrGen
 =======
 
 Generate Ultra HDR images (JPEG + Gain Map) optimized for SDR and HDR displays.
 
-📸 Overview
+Overview
 -----------
 
 UhdrGen is a Python tool that creates Ultra HDR images by combining SDR and HDR sources into a single JPEG file with a gain map.
@@ -14,7 +14,7 @@ This ensures:
 - ✅ Enhanced brightness and contrast on HDR displays
 - ✅ Compatibility with platforms like Instagram
 
-🚀 Quick Start
+Quick Start
 ------------------
 
 ```
@@ -41,15 +41,15 @@ brew install libultrahdr
 Install from https://github.com/google/libultrahdr <br>
 Add 'ultrahdr_app' to the PATH
 
-⚙️ Usage
+Usage
 --------
 
-<h3>Mode 1: sh2u (SDR + HDR → UltraHDR) ✅ Recommended</h3>
+<h3>SDR + HDR → UltraHDR (✅ Recommended)</h3>
 
 Combine SDR image (jpg) and HDR image (avif)
 
 ```
-main.py --mode sh2u --sdr input_sdr.jpg --hdr input_hdr.avif -o output_uhdr_1.jpg
+main.py --sdr input_sdr.jpg --hdr input_hdr.avif -o output_uhdr_1.jpg
 ```
 
 <table>
@@ -68,7 +68,7 @@ main.py --mode sh2u --sdr input_sdr.jpg --hdr input_hdr.avif -o output_uhdr_1.jp
 <h4>Batch mode:</h4>
 
 ```
-python main.py --dir path/to/images/
+main.py --dir path/to/images/
 ```
 
 File naming convention type:
@@ -80,12 +80,12 @@ image.avif
 
 ---
 
-<h3>Mode 2: sse2u (SDR + SDR exposure → UltraHDR)</h3>
+<h3>SDR + SDR -xEV → UltraHDR</h3>
 
 Combine SDR image and SDR underexposed image (with EV value)
 
 ```
-main.py --mode sse2u --sdr input_sdr.jpg --sdrev input_sdr_2ev.avif --ev 2 -o output_uhdr_2.jpg
+main.py --sdr input_sdr.jpg --sdrev input_sdr_2ev.avif --ev 2 -o output_uhdr_2.jpg
 ```
 
 <table>
@@ -103,12 +103,12 @@ main.py --mode sse2u --sdr input_sdr.jpg --sdrev input_sdr_2ev.avif --ev 2 -o ou
 
 ---
 
-<h3>Mode 3: se2u (SDR boosted EV → UltraHDR)</h3>
+<h3>SDR boosted EV → UltraHDR</h3>
 
 Generate HDR from one SDR image with exposure compensation
 
 ```
-main.py --mode se2u --sdr input_sdr_2ev.jpg --ev 2 -o output_uhdr_3.jpg
+main.py --sdr input_sdr_2ev.jpg --ev 2 -o output_uhdr_3.jpg
 ```
 
 <table>
