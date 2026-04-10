@@ -1,12 +1,12 @@
-UhdrGen
+Hdr-Gainmap
 =======
 
-Generate Ultra HDR images (JPEG + Gain Map) optimized for SDR and HDR displays.
+Generate HDR images (jpeg + Gain Map) optimized for SDR and HDR displays.
 
 Overview
 -----------
 
-UhdrGen is a Python tool that creates Ultra HDR images by combining SDR and HDR sources into a single JPEG file with a gain map.
+This project is a Python tool that creates Ultra HDR images by combining SDR and HDR sources into a single JPEG file with a gain map.
 
 This ensures:
 
@@ -18,8 +18,8 @@ Quick Start
 ------------------
 
 ```
-   git clone https://github.com/jb-jrdn/UhdrGen.git
-   cd UhdrGen
+   git clone https://github.com/jb-jrdn/Hdr-Gainmap
+   cd Hdr-Gainmap
 
    python3 -m venv venv
    source venv/bin/activate    # macOS / Linux

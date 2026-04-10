@@ -161,7 +161,7 @@ def get_adapted_rgb_primaries(
     origin_rgb_profile: colour.RGB_Colourspace,
     new_rgb_profile: colour.RGB_Colourspace,
     is_hdr: bool = False,
-):
+) -> np.ndarray:
     dest_image = colour.RGB_to_RGB(
         RGB=image,
         input_colourspace=origin_rgb_profile,
@@ -180,7 +180,7 @@ def get_hdr_from_sdr_stacking(
     ev: float,
     luminance_mask_parameters: tuple = (0.25, 0.60),
     color_mask_parameters: tuple = (0.10, 0.25),
-):
+) -> np.ndarray:
     # convert sdr_ev to sdr color space and apply ev
     sdr_ev_np_linear = colour.RGB_to_RGB(
         RGB=sdr_ev_np_linear,
