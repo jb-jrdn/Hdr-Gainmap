@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from PIL import Image
-from PIL.ImageCms import ImageCmsProfile
+from PIL import Image, ImageCms, ImageDraw, ImageFont
 from io import BytesIO
 import colour
+import cv2
 
 CICP = {
     "primaries": {
@@ -106,27 +106,27 @@ def get_rgb_colourspace_from_icc_profile(
     profileData = None
     try:
         f = BytesIO(icc_in)
-        profileData = ImageCmsProfile(f)
+        profileData = ImageCms.ImageCmsProfile(f)
     except:
         print("⚠️ Color profile not found: sRGB used")
         return colour.RGB_COLOURSPACES["sRGB"]
 
     profildescription = profileData.profile.profile_description
 
-    colorspaceName = "sRGB"
+    colourspaceName = "sRGB"
     if "P3" in profildescription:
         if "sRGB" in profildescription or "Display P3" in profildescription:
-            colorspaceName = "Display P3"
+            colourspaceName = "Display P3"
         else:
-            colorspaceName = "DCI-P3"
+            colourspaceName = "DCI-P3"
     elif "2020" in profildescription:
-        colorspaceName = "ITU-R BT.2020"
+        colourspaceName = "ITU-R BT.2020"
     elif "Adobe" in profildescription:
-        colorspaceName = "Adobe RGB (1998)"
+        colourspaceName = "Adobe RGB (1998)"
     elif "ProPhoto" in profildescription:
-        colorspaceName = "ProPhoto RGB"
+        colourspaceName = "ProPhoto RGB"
 
-    return colour.RGB_COLOURSPACES[colorspaceName]
+    return colour.RGB_COLOURSPACES[colourspaceName]
 
 
 def open_sdr_image(
@@ -145,6 +145,27 @@ def open_sdr_image(
     image_np = np.array(image_pil) / 255
 
     return image_np, colourspace
+
+
+def save_sdr_image(
+    sdr_np_image_linear: np.ndarray,
+    rgb_profile: colour.RGB_Colourspace,
+    sdr_path: str,
+    icc_path: str | None = None,
+    quality: int = 95,
+) -> None:
+    sdr_np_image = rgb_profile.cctf_encoding(sdr_np_image_linear)
+    sdr_np_image = (sdr_np_image * 255).astype(np.uint8)
+    sdr_np_image = np.clip(sdr_np_image, 0, 255)
+    image = Image.fromarray(sdr_np_image, mode='RGB')
+
+    if icc_path:
+        if not os.path.isfile(icc_path):
+            raise FileNotFoundError(f"Icc file not found: {icc_path}")
+        icc_data = ImageCms.getOpenProfile(icc_path)
+        image.save(sdr_path, quality=quality, icc_profile=icc_data.tobytes())
+    else:
+        image.save(sdr_path, quality=quality)
 
 
 def get_linear_image(
@@ -234,3 +255,111 @@ def get_hdr_from_sdr_stacking(
     )
 
     return hdr_np_linear
+
+
+def add_hdr_tag(
+    sdr_np_image_linear: np.ndarray,
+    hdr_np_image_linear: np.ndarray,
+    size_width_factor: float = 0.05,
+    marging_factor: float = 0.01,
+) -> None:
+    
+    def get_tag_pil(
+        size_x,
+        bk_y: float = 0.015,
+        font_ev: float = 4.0,
+        is_hdr: bool = True,
+    ) -> np.ndarray:
+        temp_x_size = 260
+        temp_y_size = 130
+
+        mask = Image.new("RGB", (temp_x_size, temp_y_size), (1,1,1))
+        draw = ImageDraw.Draw(mask)
+        font = ImageFont.truetype("data/Rubik.ttf", 100)
+        
+        if is_hdr:
+            grey_level = int(pow(2, font_ev))
+            font_color = (grey_level, grey_level, grey_level)
+            draw.text((25, 5), "HDR", fill=font_color, font=font)
+
+        tag_np_image = np.array(mask) * bk_y
+        tag_np_image = cv2.resize(
+            tag_np_image,
+            (int(size_x), int(size_x * temp_y_size / temp_x_size)),
+            interpolation=cv2.INTER_AREA,
+        )
+        tag_np_image = np.clip(tag_np_image, bk_y, bk_y * pow(2, font_ev))
+        return tag_np_image
+    
+    size_x = int(sdr_np_image_linear.shape[1] * size_width_factor)
+    sdr_tag_image = get_tag_pil(size_x, is_hdr=False)
+    hdr_tag_image = get_tag_pil(size_x, is_hdr=True)
+
+    size_x = hdr_tag_image.shape[1]
+    size_y = hdr_tag_image.shape[0]
+    marging = sdr_np_image_linear.shape[1] * marging_factor
+
+    x_pos = int(sdr_np_image_linear.shape[1] - size_x - marging)
+    y_pos = int(sdr_np_image_linear.shape[0] - size_y - marging)
+
+    sdr_np_image_linear[y_pos:y_pos+size_y, x_pos:x_pos+size_x] = sdr_tag_image
+    hdr_np_image_linear[y_pos:y_pos+size_y, x_pos:x_pos+size_x] = hdr_tag_image
+
+
+def crop_to_ratio(
+    img,
+    min_ratio,
+    max_ratio,
+) -> np.ndarray:
+    height, width = img.shape[:2]
+    ratio = width / height
+
+    # already ok
+    if min_ratio <= ratio <= max_ratio:
+        return img
+
+    # too large
+    if ratio > max_ratio:
+        new_w = int(height * max_ratio)
+        x1 = (width - new_w) // 2
+        return img[:, x1:x1 + new_w]
+
+    # too high
+    if ratio < min_ratio:
+        new_h = int(width)
+        y1 = (height - new_h) // 2
+        return img[y1:y1 + new_h, :]
+
+    return img
+
+
+def resize_to_max(
+    img: np.ndarray,
+    width_max: int | None,
+    height_max: int | None,
+) -> np.ndarray:
+    height, width = img.shape[:2]
+    max_value = np.max(img)
+
+    # already ok
+    if width_max is None and height_max is None:
+        return img
+
+    if width <= width_max and height <= height_max:
+        return img
+
+    # scale factor
+    scale_w = width_max / width if width_max else float("inf")
+    scale_h = height_max / height if height_max else float("inf")
+
+    scale = min(scale_w, scale_h, 1.0)
+
+    new_w = int(width * scale)
+    new_h = int(height * scale)
+
+    def sharpen_light(img, max_value, amount=0.8, blur_sigma=0.7):
+        blurred = cv2.GaussianBlur(img, (0, 0), blur_sigma)
+        sharpened = cv2.addWeighted(img, 1 + amount, blurred, -amount, 0)
+        return np.clip(sharpened, 0, max_value)
+
+    return sharpen_light(cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA), max_value)
