@@ -326,7 +326,7 @@ def crop_to_ratio(
 
     # too high
     if ratio < min_ratio:
-        new_h = int(width)
+        new_h = int(width / min_ratio)
         y1 = (height - new_h) // 2
         return img[y1:y1 + new_h, :]
 

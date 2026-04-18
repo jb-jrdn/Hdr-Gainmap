@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from tools.preset import Preset
-from tools.uhdr_settings import UhdrSettings, PRESETS as UHDR_PRESETS
+from preset import Preset
+from uhdr.uhdr_settings import UhdrSettings, PRESETS as UHDR_PRESETS
 
 
 @dataclass
@@ -9,7 +9,7 @@ class ImageSettings:
     max_ratio_w_h: float | None = None
     width_max: int | None = None
     height_max: int | None = None
-    quality: int = 92
+    quality: int = 95
     output_rgb_profile: str | None = None
     uhdr_settings: UhdrSettings = UhdrSettings()
 

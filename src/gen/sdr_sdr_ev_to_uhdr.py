@@ -1,6 +1,6 @@
 import os
-from tools.uhdr import UltraHdr
-from tools import image_tools
+from uhdr.uhdr import UltraHdr
+from image import image_tools
 
 class SdrSdrEvToUhdr:
 

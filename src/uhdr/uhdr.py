@@ -2,8 +2,8 @@ import os
 import subprocess
 import numpy as np
 import cv2
-from tools.uhdr_metadata import UhdrMetadata
-from tools.uhdr_settings import UhdrSettings
+from uhdr.uhdr_metadata import UhdrMetadata
+from uhdr.uhdr_settings import UhdrSettings
 
 
 ULTRAHDR_APP = r"ultrahdr_app"

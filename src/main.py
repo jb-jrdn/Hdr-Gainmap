@@ -1,5 +1,5 @@
 import typer
-from tools.preset import Preset
+from preset import Preset
 
 
 app = typer.Typer(

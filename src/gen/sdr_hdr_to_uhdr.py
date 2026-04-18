@@ -1,8 +1,8 @@
 import os
-from tools.uhdr import UltraHdr
-from tools import image_tools
-from tools.preset import Preset
-from tools.image_settings import PRESETS
+from uhdr.uhdr import UltraHdr
+from preset import Preset
+from image import image_tools
+from image.image_settings import PRESETS
 
 
 class SdrHdrToUhdr:
@@ -33,7 +33,7 @@ class SdrHdrToUhdr:
         if sdr_np_image.shape[:2] != hdr_np_image.shape[:2]:
             raise("Sdr and Hdr image sizes are not identical")
 
-        # Crop to respect ratio if needed
+        # crop to respect ratio if needed
         if self.settings.min_ratio_w_h or self.settings.max_ratio_w_h:
             sdr_np_image = image_tools.crop_to_ratio(
                 img=sdr_np_image,
@@ -47,7 +47,7 @@ class SdrHdrToUhdr:
             )
             self.sdr_changed = True
         
-        # Resize to respect max size if needed
+        # resize to respect max size if needed
         if self.settings.width_max or self.settings.height_max:
             sdr_np_image = image_tools.resize_to_max(
                 img=sdr_np_image,
@@ -72,7 +72,7 @@ class SdrHdrToUhdr:
             is_hdr=True,
         )
 
-        # convert hdr values to the sdr color profile
+        # convert hdr values to the sdr primaries
         hdr_np_image_linear = image_tools.get_adapted_rgb_primaries(
             image=hdr_np_image_linear,
             origin_rgb_profile=hdr_rgb_profile,
@@ -80,7 +80,7 @@ class SdrHdrToUhdr:
             is_hdr=True,
         )
 
-        # Add Hdr tag if asked
+        # add Hdr tag if asked
         if self.tag:
             image_tools.add_hdr_tag(
                 sdr_np_image_linear=sdr_np_image_linear,
@@ -88,11 +88,11 @@ class SdrHdrToUhdr:
             )
             self.sdr_changed = True
         
-        # Save new sdr if needed
+        # save new sdr if needed
         sdr_path = self.sdr_path
         if self.sdr_changed:
             base_path, _ = os.path.splitext(self.sdr_path)
-            sdr_path = f"{base_path}_new.jpg"
+            sdr_path = f"{base_path}_temp.jpg"
             # TODO: rgb profil management
             image_tools.save_sdr_image(
                 sdr_np_image_linear=sdr_np_image_linear,
