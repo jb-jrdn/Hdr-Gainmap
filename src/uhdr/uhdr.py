@@ -56,6 +56,8 @@ class UltraHdr:
         # create metadata file
         self.metadata.min_content_boost = min_map
         self.metadata.max_content_boost = max_map
+        if self.settings.forced_max_hdr_capacity:
+            self.metadata.max_hdr_capacity = self.settings.forced_max_hdr_capacity 
         UltraHdr.create_metadata(
             metadata=self.metadata,
             metadata_path=self.metadata_path,

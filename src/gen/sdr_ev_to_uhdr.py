@@ -18,7 +18,7 @@ class SdrToUhdr:
 
     def run(self) -> None:
         # load image
-        sdr_np_image, sdr_rgb_profile = image_tools.open_sdr_image(self.sdr_path)
+        sdr_np_image, sdr_rgb_profile, exif = image_tools.open_sdr_image(self.sdr_path)
 
         # get rgb linear values
         sdr_np_image_linear = image_tools.get_linear_image(

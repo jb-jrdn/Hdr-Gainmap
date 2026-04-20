@@ -4,11 +4,11 @@ from preset import Preset
 
 @dataclass
 class UhdrSettings:
-    min_gain: float = 0.8
-    max_gain: float = 49.261
+    min_gain: float = 0.5
+    max_gain: float = 10000/203
     gain_map_quality: int = 90
     gain_map_size_factor: int = 1
-    adapt_max_hdr_capacity: bool = True
+    forced_max_hdr_capacity: float | None = None
 
 
 PRESETS = {

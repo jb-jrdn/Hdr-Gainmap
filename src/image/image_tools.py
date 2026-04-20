@@ -37,6 +37,12 @@ CICP = {
 }
 
 
+ICC = {
+    "sRGB": r"data/icc/sRGB.icc",
+    "Display P3": r"data/icc/DisplayP3.icc",
+}
+
+
 def get_hdr_rgb_colourspace(
     primaries: str,  # typically "sRGB", "Display P3" or "ITU-R BT.2020"
     cctf: str,       # typically "ITU-R BT.2100 PQ" or "ITU-R BT.2100 HLG"
@@ -143,29 +149,32 @@ def open_sdr_image(
     
     colourspace = get_rgb_colourspace_from_icc_profile(image_pil)
     image_np = np.array(image_pil) / 255
+    exif = image_pil.info.get("exif")
 
-    return image_np, colourspace
+    return image_np, colourspace, exif
 
 
 def save_sdr_image(
     sdr_np_image_linear: np.ndarray,
     rgb_profile: colour.RGB_Colourspace,
     sdr_path: str,
-    icc_path: str | None = None,
     quality: int = 95,
+    exif: bytes = None,
 ) -> None:
     sdr_np_image = rgb_profile.cctf_encoding(sdr_np_image_linear)
     sdr_np_image = (sdr_np_image * 255).astype(np.uint8)
     sdr_np_image = np.clip(sdr_np_image, 0, 255)
     image = Image.fromarray(sdr_np_image, mode='RGB')
 
-    if icc_path:
-        if not os.path.isfile(icc_path):
-            raise FileNotFoundError(f"Icc file not found: {icc_path}")
-        icc_data = ImageCms.getOpenProfile(icc_path)
-        image.save(sdr_path, quality=quality, icc_profile=icc_data.tobytes())
+    icc_path = ICC.get(rgb_profile.name)
+    if not icc_path or not os.path.isfile(icc_path):
+        raise FileNotFoundError(f"Icc profile {rgb_profile.name} not found")
+    icc_data = ImageCms.getOpenProfile(icc_path)
+
+    if exif:
+        image.save(sdr_path, quality=quality, icc_profile=icc_data.tobytes(), exif=exif)
     else:
-        image.save(sdr_path, quality=quality)
+        image.save(sdr_path, quality=quality, icc_profile=icc_data.tobytes())
 
 
 def get_linear_image(

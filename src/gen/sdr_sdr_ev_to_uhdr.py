@@ -22,8 +22,8 @@ class SdrSdrEvToUhdr:
 
     def run(self) -> None:
         # load images
-        sdr_np_image, sdr_rgb_profile = image_tools.open_sdr_image(self.sdr_path)
-        sdr_ev_np_image, sdr_ev_rgb_profile = image_tools.open_sdr_image(self.sdr_ev_path)
+        sdr_np_image, sdr_rgb_profile, sdr_exif = image_tools.open_sdr_image(self.sdr_path)
+        sdr_ev_np_image, sdr_ev_rgb_profile, _ = image_tools.open_sdr_image(self.sdr_ev_path)
 
         # get rgb linear values
         sdr_np_image_linear = image_tools.get_linear_image(

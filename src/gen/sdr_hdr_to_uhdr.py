@@ -26,7 +26,7 @@ class SdrHdrToUhdr:
 
     def run(self) -> None:
         # load images
-        sdr_np_image, sdr_rgb_profile = image_tools.open_sdr_image(self.sdr_path)
+        sdr_np_image, sdr_rgb_profile, sdr_exif = image_tools.open_sdr_image(self.sdr_path)
         hdr_np_image, hdr_rgb_profile = image_tools.open_hdr_avif_image(self.hdr_path)
 
         # check sizes consistency
@@ -93,12 +93,11 @@ class SdrHdrToUhdr:
         if self.sdr_changed:
             base_path, _ = os.path.splitext(self.sdr_path)
             sdr_path = f"{base_path}_temp.jpg"
-            # TODO: rgb profil management
             image_tools.save_sdr_image(
                 sdr_np_image_linear=sdr_np_image_linear,
                 rgb_profile=sdr_rgb_profile,
                 sdr_path=sdr_path,
-                icc_path="data/DisplayP3.icc",
+                exif=sdr_exif,
             )
 
         # create uhdr image
