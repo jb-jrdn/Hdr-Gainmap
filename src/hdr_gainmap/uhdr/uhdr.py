@@ -34,17 +34,13 @@ class UltraHdr:
         self._linear_hdr_image = linear_hdr_image
         self._sdr_path = input_sdr_path
         self._uhdr_path = (
-            self._sdr_path.with_stem(self._sdr_path.stem + "_uhdr")
-            if output_uhdr_path is None
-            else output_uhdr_path
+            self._sdr_path.with_stem(self._sdr_path.stem + "_uhdr") if output_uhdr_path is None else output_uhdr_path
         )
         self._settings = settings
         self._metadata = metadata
         self._keep_temp_files = keep_temp_files
         self._gainmap_path = self._sdr_path.with_stem(self._sdr_path.stem + "_gainMap")
-        self._metadata_path = self._sdr_path.with_stem(
-            self._sdr_path.stem + "_metadata"
-        ).with_suffix("cfg")
+        self._metadata_path = self._sdr_path.with_stem(self._sdr_path.stem + "_metadata").with_suffix(".cfg")
 
     def run(self) -> None:
         # process gain map
@@ -106,9 +102,7 @@ class UltraHdr:
         if not metadata.is_valid():
             raise ValueError("Metadata is not valid.")
 
-        used_max_hdr_capacity = max(
-            min(metadata.max_hdr_capacity, metadata.max_content_boost), 1.1
-        )
+        used_max_hdr_capacity = max(min(metadata.max_hdr_capacity, metadata.max_content_boost), 1.1)
 
         content_lines = [
             f"--minContentBoost {metadata.min_content_boost:.3f}",
@@ -155,9 +149,7 @@ class UltraHdr:
         if sdr_np_image_linear.shape != hdr_np_image_linear.shape:
             raise ValueError("SDR and HDR images must have the same shape.")
 
-        gain = (hdr_np_image_linear + metadata.hdr_offset) / (
-            sdr_np_image_linear + metadata.sdr_offset
-        )
+        gain = (hdr_np_image_linear + metadata.hdr_offset) / (sdr_np_image_linear + metadata.sdr_offset)
 
         gain = UltraHdr.get_optimized_gain(gain)
 
@@ -193,9 +185,7 @@ class UltraHdr:
         p_high = np.percentile(max_rgb, percentile)
         gmax = max_rgb.max()
 
-        print(
-            f"optim param -> max: {gmax:.2f} | p_low: {p_low:.2f} | p_high: {p_high:.2f}"
-        )
+        print(f"optim param -> max: {gmax:.2f} | p_low: {p_low:.2f} | p_high: {p_high:.2f}")
 
         eps = 1e-8
         scale = (p_high - p_low) / (gmax - p_low + eps)
@@ -231,9 +221,7 @@ class UltraHdr:
         try:
             if size_factor != 1:
                 height, width = gainmap.shape[:2]
-                gainmap = cv2.resize(
-                    gainmap, (width // size_factor, height // size_factor)
-                )
+                gainmap = cv2.resize(gainmap, (width // size_factor, height // size_factor))
             success = cv2.imwrite(
                 gainmap_path,
                 cv2.cvtColor(gainmap, cv2.COLOR_RGB2BGR),
@@ -320,9 +308,7 @@ class UltraHdr:
         if gainmap_path is None:
             gainmap_path = sdr_path.with_stem(sdr_path.stem + "_gainMap")
         if metadata_path is None:
-            metadata_path = sdr_path.with_stem(sdr_path.stem + "_metadata").with_suffix(
-                "cfg"
-            )
+            metadata_path = sdr_path.with_stem(sdr_path.stem + "_metadata").with_suffix(".cfg")
 
         # process gain map
         gainmap_np_image, min_map, max_map = UltraHdr.get_gainmap(

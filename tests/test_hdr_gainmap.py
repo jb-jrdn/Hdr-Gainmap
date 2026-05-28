@@ -23,5 +23,17 @@ def test_app() -> None:
     run()
 
 
-def test_web_app() -> None:
+def test_batch() -> None:
+    batch_dir = Path(__file__).parent.parent / "samples"
+
+    arguments = [
+        "--dir",
+        str(batch_dir),
+        "--tag",
+        "--preset",
+        "insta",
+    ]
+
+    sys.argv.extend(arguments)
+
     run()

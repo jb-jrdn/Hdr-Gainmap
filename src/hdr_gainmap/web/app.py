@@ -35,9 +35,7 @@ def index():
         unique_id = uuid.uuid4().hex[:8]
 
         filename_path = Path(sdr_file.filename)
-        output_filename = filename_path.with_stem(
-            f"{filename_path.stem}_hdrgm_{unique_id}"
-        )
+        output_filename = filename_path.with_stem(f"{filename_path.stem}_hdrgm_{unique_id}")
         output_path = app.config["UPLOAD_FOLDER"] / output_filename
 
         preset_enum = Preset(preset)

@@ -6,7 +6,6 @@ from hdr_gainmap.image import image_tools
 
 
 class SdrTmToHdrgm(BaseGen):
-
     def __init__(
         self,
         sdr_path: Path,
@@ -19,9 +18,12 @@ class SdrTmToHdrgm(BaseGen):
 
     def _load_images(self) -> None:
         """Load SDR image."""
-        self._sdr_np_image, self._sdr_rgb_profile, self._sdr_exif_bytes, self._sdr_icc_bytes = (
-            image_tools.open_sdr_image(self._sdr_path)
-        )
+        (
+            self._sdr_np_image,
+            self._sdr_rgb_profile,
+            self._sdr_exif_bytes,
+            self._sdr_icc_bytes,
+        ) = image_tools.open_sdr_image(self._sdr_path)
 
     def _process_images(self) -> None:
         """Get linear SDR image and apply tone mapping to create HDR."""
@@ -35,7 +37,3 @@ class SdrTmToHdrgm(BaseGen):
             sdr_np_image_linear=self._sdr_np_image_linear,
             sdr_rgb_profile=self._sdr_rgb_profile,
         )
-
-    def validate(self) -> None:
-        if not self._sdr_path.is_file():
-            raise FileNotFoundError(f"Sdr image not found: {self._sdr_path}")

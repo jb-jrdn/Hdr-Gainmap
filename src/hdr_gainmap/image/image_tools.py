@@ -402,9 +402,7 @@ def resize_to_max(
         sharpened = cv2.addWeighted(img, 1 + amount, blurred, -amount, 0)
         return np.clip(sharpened, 0, max_value)
 
-    return sharpen_light(
-        cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA), max_value
-    )
+    return sharpen_light(cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA), max_value)
 
 
 def tonemap_sdr_to_hdr(

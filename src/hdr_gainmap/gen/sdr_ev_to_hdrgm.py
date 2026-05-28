@@ -22,9 +22,12 @@ class SdrToHdrgm(BaseGen):
 
     def _load_images(self) -> None:
         """Load SDR image."""
-        self._sdr_np_image, self._sdr_rgb_profile, self._sdr_exif_bytes, self._sdr_icc_bytes = (
-            image_tools.open_sdr_image(self._sdr_path)
-        )
+        (
+            self._sdr_np_image,
+            self._sdr_rgb_profile,
+            self._sdr_exif_bytes,
+            self._sdr_icc_bytes,
+        ) = image_tools.open_sdr_image(self._sdr_path)
 
     def _process_images(self) -> None:
         """Get linear SDR image and apply EV to create HDR."""
@@ -36,7 +39,6 @@ class SdrToHdrgm(BaseGen):
         self._hdr_np_image_linear = self._sdr_np_image_linear * pow(2, self._ev)
 
     def validate(self) -> None:
-        if not self._sdr_path.is_file():
-            raise FileNotFoundError(f"Sdr image not found: {self._sdr_path}")
+        super().validate()
         if not (-5 <= self._ev <= 5):
             raise ValueError("EV value must be in [-5,5]")

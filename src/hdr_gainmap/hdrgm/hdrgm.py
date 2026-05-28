@@ -65,9 +65,7 @@ def get_gainmap(
         min_gain_ev: Minimum EV per channel.
         max_gain_ev: Maximum EV per channel.
     """
-    gain = (hdr_np_image_linear + DEFAULT_OFFSET) / (
-        sdr_np_image_linear + DEFAULT_OFFSET
-    )
+    gain = (hdr_np_image_linear + DEFAULT_OFFSET) / (sdr_np_image_linear + DEFAULT_OFFSET)
     gain = get_optimized_gain(gain)
     gain_ev = np.log2(gain)
 

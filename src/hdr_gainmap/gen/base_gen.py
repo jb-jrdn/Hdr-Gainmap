@@ -1,6 +1,9 @@
 from pathlib import Path
 from abc import ABC, abstractmethod
 
+import colour
+import numpy as np
+
 from hdr_gainmap.preset import Preset
 from hdr_gainmap.image import image_tools
 from hdr_gainmap.image.image_settings import IMAGE_SETTINGS, ImageSettings
@@ -9,6 +12,7 @@ from hdr_gainmap.hdrgm.hdrgm import create_hdrgm
 
 class BaseGen(ABC):
     """Abstract base class for hdr gainmap gen"""
+
     _sdr_path: Path
     _hdrgm_path: Path
     _preset: Preset
@@ -16,6 +20,12 @@ class BaseGen(ABC):
     _tag: bool
     _keep_temp_files: bool
     _sdr_changed: bool
+    _sdr_np_image: np.ndarray
+    _sdr_np_image_linear: np.ndarray
+    _hdr_np_image_linear: np.ndarray
+    _sdr_rgb_profile: colour.RGB_Colourspace
+    _sdr_exif_bytes: bytes
+    _sdr_icc_bytes: bytes
 
     def __init__(
         self,
@@ -27,9 +37,7 @@ class BaseGen(ABC):
     ) -> None:
         self._sdr_path = sdr_path
         self._hdrgm_path = (
-            self._sdr_path.with_stem(self._sdr_path.stem + "_hdrgm")
-            if hdrgm_path is None
-            else hdrgm_path
+            self._sdr_path.with_stem(self._sdr_path.stem + "_hdrgm") if hdrgm_path is None else hdrgm_path
         )
         self._preset = Preset(preset)
         self._settings = IMAGE_SETTINGS[preset]
@@ -60,20 +68,13 @@ class BaseGen(ABC):
     @abstractmethod
     def _load_images(self) -> None:
         """Load input images. Each subclass implements its own loading logic."""
-        pass
 
     @abstractmethod
     def _process_images(self) -> None:
         """Process images to generate linear HDR. Each subclass implements specific logic."""
-        pass
 
     def _apply_crop_and_resize(self) -> None:
         """Apply cropping and resizing based on settings."""
-        # This will be overridden by subclasses that need custom logic
-        # Default implementation for single SDR image
-        if not hasattr(self, '_sdr_np_image'):
-            return
-
         if self._settings.min_ratio_w_h or self._settings.max_ratio_w_h:
             self._sdr_np_image = image_tools.crop_to_ratio(
                 img=self._sdr_np_image,
@@ -123,7 +124,7 @@ class BaseGen(ABC):
                 icc_bytes=self._sdr_icc_bytes,
             )
 
-    @abstractmethod
     def validate(self) -> None:
         """Validate input files. Each subclass implements its own validation."""
-        pass
+        if not self._sdr_path.is_file():
+            raise FileNotFoundError(f"Sdr image not found: {self._sdr_path}")

@@ -6,7 +6,7 @@ readme = "readme.md"
 authors = [
     { name = "Jb Jourdain", email = "jbjourdain@dxomark.com" }
 ]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "numpy",
     "pillow",
@@ -32,10 +32,46 @@ hdr-gainmap = "hdr_gainmap.main:run"
 hdr-gainmap-web = "hdr_gainmap.web.app:run"
 
 [tool.ruff]
-src = ["src"]
+line-length = 120
+src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+future-annotations = true
+select = ["ALL"]
+ignore = [
+    "COM812", # Do not use with the formatter
+
+    "D", # pydocstyle
+    "FBT", # Boolean-typed positional argument in function definition
+    "G004", # Logging statement uses f-string
+    "N806", # Variable in function should be lowercase
+    "PLR0913", # Too many arguments in function definition (>5 by default, configurable)
+    "S603", # Subprocess without shell
+    "T201", # Print statements
+    "TRY003", # Avoid specifying long messages outside the exception class
+
+    # These sould be easy to remove or be considered for removal
+    "S201", # Flask debug True
+    "ANN001", # Missing type for function argument
+    "ANN201", # Missing type for function return
+    "I001", # Unsorted imports (auto-fixable)
+    "B008", # Function call in default arguments
+    "EM102", # f-string in exception (auto-fixable)
+    "UP024", # OSError alias
+    "B904", # Raise without from inside except
+    "BLE001", # Blind except
+    "TRY301", # Raise within try
+    "RET504", # Unnecessary assign
+    "EM101", # Raw string in exception (auto-fixable)
+    "PLC0415", # Import outside top level
+    "TC003", # Typing only standard library import
+    "ANN204", # Missing return type in special method
+    "ANN202", # Missing return type in private function
+    "N802", # Invalid function name (snake_case)
+    "PLR2004", # Magic value comparison
+    "SIM108", # If-else bolck instead of if-expresssion
+    "TC002", # Typing only third party imports
+]
 
 [build-system]
 requires = ["uv_build>=0.11.6,<0.12.0"]

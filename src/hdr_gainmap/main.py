@@ -105,10 +105,12 @@ def run_dir(
     keep_temp_files: bool = False,
 ):
     print(f"Batch mode (sdr + hdr) on directory: {directory}")
-    from hdr_gainmap.gen import sdr_hdr_to_uhdr
+    from hdr_gainmap.gen import sdr_hdr_to_hdrgm
 
     sdr_hdr_to_hdrgm.process_folder(
         input_directory=directory,
+        preset=preset,
+        tag=tag,
         keep_temp_files=keep_temp_files,
     )
 
