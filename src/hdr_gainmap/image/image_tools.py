@@ -65,6 +65,10 @@ def open_hdr_avif_image(
     image_path: path to 16bits HDR Avif image
     :return: tuple of numpy array with RGB values between 0 and 1 and hdr image color space info
     """
+    # Pourquoi importer pillow_heif ici ?
+    # C'est une dépendance de l'app qui va automatiquement être installée.
+    # Même si ce n'était pas le cas, est-ce qu'il ne vaudrait pas mieux l'importer en haut pour que l'app crash
+    # immédiatement au lieu de retourner None ici ?
     try:
         import pillow_heif
     except ImportError:
@@ -81,6 +85,7 @@ def open_hdr_avif_image(
 
     if "16" not in image_pil.mode:
         print("Wrong hdr image format")
+        # Pour éviter de retourner None, on pourrait lever une exception ?
         return None
 
     tcIn = image_pil.info.get("nclx_profile").get("transfer_characteristics")

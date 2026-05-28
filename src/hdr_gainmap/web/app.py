@@ -7,6 +7,8 @@ import uuid
 from hdr_gainmap.main import run_sdr_hdr
 from hdr_gainmap.preset import Preset
 
+# Est-ceque c'est vraiment une bonne idée de mettre le dossier upload dans l'arborescence de l'app ?
+# On pourrait le mettre dans le dossier courant
 BASE_DIR = Path(__file__).parent
 UPLOAD_FOLDER = BASE_DIR / "uploads"
 UPLOAD_FOLDER.mkdir(exist_ok=True)
