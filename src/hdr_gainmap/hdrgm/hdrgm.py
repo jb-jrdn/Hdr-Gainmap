@@ -12,7 +12,7 @@ DEFAULT_OFFSET = 1 / 64
 DEFAULT_GAMMA = 1.0
 
 
-def get_optimized_gain(
+def optimize_gain(
     gain: np.ndarray,
     percentile: float = 99.998,
 ) -> np.ndarray:
@@ -41,10 +41,10 @@ def get_optimized_gain(
     mask = mapped > p_low
     mapped[mask] = p_low + (mapped[mask] - p_low) * scale
 
-    ratio = mapped / (max_rgb + eps)
+    np.add(max_rgb, eps, out=max_rgb)
+    np.divide(mapped, max_rgb, out=mapped)
 
-    optimized_gain = gain * ratio[..., None]
-    return optimized_gain
+    gain *= mapped[..., None]
 
 
 def get_gainmap(
@@ -65,11 +65,16 @@ def get_gainmap(
         min_gain_ev: Minimum EV per channel.
         max_gain_ev: Maximum EV per channel.
     """
-    gain = (hdr_np_image_linear + DEFAULT_OFFSET) / (
-        sdr_np_image_linear + DEFAULT_OFFSET
-    )
-    gain = get_optimized_gain(gain)
-    gain_ev = np.log2(gain)
+    gain = np.empty_like(hdr_np_image_linear)
+    denom = np.empty_like(sdr_np_image_linear)
+    np.add(hdr_np_image_linear, DEFAULT_OFFSET, out=gain)
+    np.add(sdr_np_image_linear, DEFAULT_OFFSET, out=denom)
+    np.divide(gain, denom, out=gain)
+    del denom
+
+    optimize_gain(gain)
+    np.log2(gain, out=gain)
+    gain_ev = gain
 
     # resize gain map if needed
     if hdrgm_settings.gain_map_size_factor > 1:
@@ -93,10 +98,14 @@ def get_gainmap(
     min_gain_ev = min_gain_ev_np.reshape((1, 1, -1))
     max_gain_ev = max_gain_ev_np.reshape((1, 1, -1))
 
-    gain_ev_norm = (gain_ev - min_gain_ev) / (max_gain_ev - min_gain_ev)
-    gain_ev_norm = np.clip(gain_ev_norm, 0.0, 1.0)
-    gain_ev_norm = np.power(gain_ev_norm, DEFAULT_GAMMA)
-    gainmap = np.round(gain_ev_norm * 255).astype(np.uint8)
+    gain_ev -= min_gain_ev
+    gain_ev /= (max_gain_ev - min_gain_ev)
+    np.clip(gain_ev, 0.0, 1.0, out=gain_ev)
+    if DEFAULT_GAMMA != 1.0:
+        np.power(gain_ev, DEFAULT_GAMMA, out=gain_ev)
+    np.multiply(gain_ev, 255.0, out=gain_ev)
+    np.rint(gain_ev, out=gain_ev)
+    gainmap = gain_ev.astype(np.uint8)
 
     min_gain_ev = tuple(min_gain_ev_np.tolist())
     max_gain_ev = tuple(max_gain_ev_np.tolist())

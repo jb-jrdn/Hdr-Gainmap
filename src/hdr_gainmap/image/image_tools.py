@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageCms, ImageDraw, ImageFont
 from io import BytesIO
+import pillow_heif
 import colour
 import cv2
 
@@ -58,43 +59,49 @@ def get_hdr_rgb_colourspace(
 
 def open_hdr_avif_image(
     image_path: Path,
-) -> tuple[np.ndarray, colour.RGB_Colourspace] | None:
+) -> tuple[np.ndarray, colour.RGB_Colourspace | None]:
     """
-    Return float np.ndarray image from avif file
-    ----------
-    image_path: path to 16bits HDR Avif image
-    :return: tuple of numpy array with RGB values between 0 and 1 and hdr image color space info
-    """
-    try:
-        import pillow_heif
-    except ImportError:
-        print(
-            "⚠️ To open Avif files, please install pillow-heif -> \
-            'python -m pip install pillow-heif'"
-        )
-        return None
+    Open HDR AVIF image and return normalized RGB array (0-1) + color space.
 
+    Args:
+        image_path: Path to AVIF image.
+
+    Returns:
+        Tuple (image RGB float32 [0..1], color space or None)
+    """
     if not image_path.is_file():
         raise FileNotFoundError(f"Image file not found: {image_path}")
 
-    image_pil = pillow_heif.open_heif(image_path, convert_hdr_to_8bit=False)
+    try:
+        image_pil = pillow_heif.open_heif(image_path, convert_hdr_to_8bit=False)
+    except Exception as e:
+        raise ValueError(f"Failed to decode AVIF image: {image_path}") from e
 
-    if "16" not in image_pil.mode:
-        print("Wrong hdr image format")
-        return None
+    try:
+        if "16" not in image_pil.mode:
+            raise ValueError("Invalid image format")
 
-    tcIn = image_pil.info.get("nclx_profile").get("transfer_characteristics")
-    primIn = image_pil.info.get("nclx_profile").get("color_primaries")
+        info = image_pil.info
+        nclx = info.get("nclx_profile") or {}
 
-    cctf = CICP["cctf"].get(tcIn) if tcIn else None
-    primaries = CICP["primaries"].get(primIn) if primIn else None
+        tcIn = nclx.get("transfer_characteristics")
+        primIn = nclx.get("color_primaries")
 
-    if primaries and cctf:
-        colourspace = get_hdr_rgb_colourspace(primaries, cctf).copy()
-    else:
-        colourspace = None
+        cctf = CICP["cctf"].get(tcIn) if tcIn else None
+        primaries = CICP["primaries"].get(primIn) if primIn else None
 
-    return np.asarray(image_pil) / (2**16 - 1), colourspace
+        if primaries and cctf:
+            colourspace = get_hdr_rgb_colourspace(primaries, cctf).copy()
+        else:
+            colourspace = None
+
+        image_np = np.asarray(image_pil, dtype=np.float32)
+        image_np /= 65535.0
+
+    finally:
+        del image_pil
+
+    return image_np, colourspace
 
 
 def get_rgb_colourspace_from_icc_profile(
@@ -115,7 +122,7 @@ def get_rgb_colourspace_from_icc_profile(
         f = BytesIO(icc_in)
         profileData = ImageCms.ImageCmsProfile(f)
     except ValueError:
-        print("⚠️ Color profile not found: sRGB used")
+        print("Color profile not found: sRGB used")
         return colour.RGB_COLOURSPACES["sRGB"]
 
     profildescription = profileData.profile.profile_description
@@ -155,30 +162,28 @@ def open_sdr_image(
     if not image_path.is_file():
         raise FileNotFoundError(f"Image file not found: {image_path}")
 
-    image_pil = Image.open(image_path)
-    if image_pil is None:
-        print(f"Error: Could not open or decode the image at {image_path}")
-        return None
-
-    colourspace = get_rgb_colourspace_from_icc_profile(image_pil)
-    exif = image_pil.info.get("exif")
-    icc_profile = image_pil.info.get("icc_profile")
+    with Image.open(image_path) as image_pil:
+        colourspace = get_rgb_colourspace_from_icc_profile(image_pil)
+        exif = image_pil.info.get("exif")
+        icc_profile = image_pil.info.get("icc_profile")
 
     image_np = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
     if image_np is None:
-        print(f"Error: Could not open or decode the image at {image_path}")
-        return None
+        raise ValueError(f"Could not decode image: {image_path}")
 
     # Remove alpha channel if exists
     if image_np.ndim == 3 and image_np.shape[2] == 4:
         image_np = image_np[:, :, :3]
 
-    image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+    # BGR to RGB
+    image_np = image_np[..., ::-1]
 
     if image_np.dtype == np.uint8:
-        image_np = image_np / (2**8 - 1)
+        image_np = image_np.astype(np.float32)
+        image_np /= 255.0
     elif image_np.dtype == np.uint16:
-        image_np = image_np / (2**16 - 1)
+        image_np = image_np.astype(np.float32)
+        image_np /= 65535.0
 
     return image_np, colourspace, exif, icc_profile
 
@@ -195,14 +200,14 @@ def save_sdr_image(
     sdr_np_image = np.clip(sdr_np_image * 255, 0, 255).astype(np.uint8)
     image = Image.fromarray(sdr_np_image, mode="RGB")
 
-    if not icc_bytes:
+    if icc_bytes is None:
         icc_path = ICC.get(rgb_profile.name)
         if icc_path is None:
             raise FileNotFoundError(f"Icc profile {rgb_profile.name} not found")
         with as_file(icc_path) as icc_file:
             icc_bytes = ImageCms.getOpenProfile(str(icc_file)).tobytes()
 
-    if exif_bytes:
+    if exif_bytes is not None:
         image.save(sdr_path, quality=quality, icc_profile=icc_bytes, exif=exif_bytes)
     else:
         image.save(sdr_path, quality=quality, icc_profile=icc_bytes)
@@ -349,10 +354,13 @@ def add_hdr_tag(
 
 
 def crop_to_ratio(
-    img,
-    min_ratio,
-    max_ratio,
+    img: np.ndarray,
+    min_ratio: float,
+    max_ratio: float,
 ) -> np.ndarray:
+    """
+    Crop image to fit a ratio range (centered).
+    """
     height, width = img.shape[:2]
     ratio = width / height
 
@@ -363,16 +371,13 @@ def crop_to_ratio(
     # too large
     if ratio > max_ratio:
         new_w = int(height * max_ratio)
-        x1 = (width - new_w) // 2
+        x1 = (width - new_w) >> 1
         return img[:, x1 : x1 + new_w]
 
     # too high
-    if ratio < min_ratio:
-        new_h = int(width / min_ratio)
-        y1 = (height - new_h) // 2
-        return img[y1 : y1 + new_h, :]
-
-    return img
+    new_h = int(width / min_ratio)
+    y1 = (height - new_h) >> 1
+    return img[y1 : y1 + new_h, :]
 
 
 def resize_to_max(
@@ -380,31 +385,37 @@ def resize_to_max(
     width_max: int | None,
     height_max: int | None,
 ) -> np.ndarray:
+    """
+    Downscale an image to fit within the maximum width/height.
+    """
     height, width = img.shape[:2]
-    max_value = np.max(img)
 
     if width_max is None and height_max is None:
         return img
 
-    if width <= width_max and height <= height_max:
+    if (width_max is None or width <= width_max) and (
+        height_max is None or height <= height_max
+    ):
         return img
 
-    scale_w = width_max / width if width_max else float("inf")
-    scale_h = height_max / height if height_max else float("inf")
-
+    scale_w = width_max / width if width_max is not None else float("inf")
+    scale_h = height_max / height if height_max is not None else float("inf")
     scale = min(scale_w, scale_h, 1.0)
 
     new_w = int(width * scale)
     new_h = int(height * scale)
 
-    def sharpen_light(img, max_value, amount=0.8, blur_sigma=0.7):
+    def sharpen_light(
+        img: np.ndarray, max_value: float, amount: float = 0.8, blur_sigma: float = 0.7
+    ) -> np.ndarray:
         blurred = cv2.GaussianBlur(img, (0, 0), blur_sigma)
-        sharpened = cv2.addWeighted(img, 1 + amount, blurred, -amount, 0)
-        return np.clip(sharpened, 0, max_value)
+        cv2.addWeighted(img, 1 + amount, blurred, -amount, 0, dst=img)
+        np.clip(img, 0, max_value, out=img)
+        return img
 
-    return sharpen_light(
-        cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA), max_value
-    )
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    max_value = np.max(resized)
+    return sharpen_light(resized, max_value)
 
 
 def tonemap_sdr_to_hdr(
