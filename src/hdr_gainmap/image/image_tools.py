@@ -219,7 +219,7 @@ def get_linear_image(
     is_hdr: bool = False,
 ) -> np.ndarray:
     ratio = 1 if not is_hdr else 203
-    return rgb_profile.cctf_decoding(image) / ratio
+    return (rgb_profile.cctf_decoding(image) / ratio).astype(np.float32)
 
 
 def get_adapted_rgb_primaries(
@@ -235,7 +235,7 @@ def get_adapted_rgb_primaries(
         chromatic_adaptation_transform="Bradford",
     )
     max_value = 1.0 if not is_hdr else None
-    return np.clip(dest_image, 0, max_value)
+    return np.clip(dest_image, 0, max_value).astype(np.float32)
 
 
 def get_hdr_from_sdr_stacking(
@@ -299,7 +299,7 @@ def get_hdr_from_sdr_stacking(
         colourspace=sdr_rgb_profile,
     )
 
-    return hdr_np_linear
+    return hdr_np_linear.astype(np.float32)
 
 
 def add_hdr_tag(

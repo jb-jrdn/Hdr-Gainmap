@@ -194,16 +194,17 @@ def create_hdrgm(
         gainmap_icc=None,
     )
 
-    write_21496(
-        data=gainmapImage,
-        filepath=output_path,
-        baseline_quality=hdrgm_settings.sdr_quality,
-        gainmap_quality=hdrgm_settings.gain_map_quality,
-    )
-
     if keep_temp_files:
         cv2.imwrite(
             output_path.with_stem(output_path.stem + "_gm"),
             cv2.cvtColor(gainmap, cv2.COLOR_RGB2BGR),
             [cv2.IMWRITE_JPEG_QUALITY, hdrgm_settings.gain_map_quality],
         )
+    del sdr_np_image, gainmap, metadata
+
+    write_21496(
+        data=gainmapImage,
+        filepath=output_path,
+        baseline_quality=hdrgm_settings.sdr_quality,
+        gainmap_quality=hdrgm_settings.gain_map_quality,
+    )

@@ -48,6 +48,12 @@ class BaseGen(ABC):
         # Get linear images and process
         self._process_images()
 
+        # Clean up unused images to save memory     
+        if hasattr(self, "_sdr_np_image"):
+            delattr(self, "_sdr_np_image")
+        if hasattr(self, "_hdr_np_image"):
+            delattr(self, "_hdr_np_image")
+
         # Add HDR tag if requested
         self._apply_hdr_tag()
 
